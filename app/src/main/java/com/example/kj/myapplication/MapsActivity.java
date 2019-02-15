@@ -8,6 +8,7 @@ import android.location.Geocoder;
 import android.location.Location;
 import android.os.Bundle;
 import android.os.Looper;
+import android.support.annotation.NonNull;
 import android.support.v4.app.ActivityCompat;
 import android.support.v4.app.FragmentActivity;
 import android.view.View;
@@ -31,6 +32,11 @@ import com.google.android.gms.maps.model.BitmapDescriptorFactory;
 import com.google.android.gms.maps.model.LatLng;
 import com.google.android.gms.maps.model.Marker;
 import com.google.android.gms.maps.model.MarkerOptions;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
+import com.google.firebase.database.DatabaseReference;
+import com.google.firebase.database.FirebaseDatabase;
+import com.google.firebase.database.ValueEventListener;
 
 import java.io.IOException;
 import java.util.List;
@@ -45,12 +51,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     FusedLocationProviderClient mFusedLocationClient;
     Marker marker;
     Location mLastLocation;
-
+    private DatabaseReference mDatabase;
+    EditText et;
+    TextView tvLocality,tvLat,tvLng;
+    String id;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         mFusedLocationClient = getFusedLocationProviderClient(this);
+        mDatabase= FirebaseDatabase.getInstance().getReference("Geolocation");
         // Obtain the SupportMapFragment and get notified when the map is ready to be used.
         if (googleServicesAvailable()) {
             Toast.makeText(this, "perfect! Google map services available", Toast.LENGTH_LONG).show();
@@ -87,23 +97,23 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     @Override
     public void onMapReady(GoogleMap googleMap) {
         mMap = googleMap;
-
-        //getRetrieveLocation();
+        mDatabase.addValueEventListener(new ValueEventListener() {
+            @Override
+            public void onDataChange(DataSnapshot dataSnapshot) {
+                for (DataSnapshot s : dataSnapshot.getChildren()) {
+                    maps user = s.getValue(maps.class);
+                    setMarker(user.getLocation(), user.getLatitude(), user.getLongitude());
+                    }
+                }
+                 @Override
+                 public void onCancelled(@NonNull DatabaseError databaseError) {
+                }
+        });
+         //getRetrieveLocation();
         if (mMap != null) {
-
             mMap.setOnMarkerDragListener(new GoogleMap.OnMarkerDragListener() {
                 @Override
                 public void onMarkerDragStart(Marker marker) {
-
-                }
-
-                @Override
-                public void onMarkerDrag(Marker marker) {
-
-                }
-
-                @Override
-                public void onMarkerDragEnd(Marker marker) {
                     Geocoder gc= new Geocoder(MapsActivity.this);
                     LatLng ll= marker.getPosition();
                     List<Address> list=null;
@@ -115,6 +125,16 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                     Address addrs=list.get(0);
                     marker.setTitle(addrs.getLocality());
                     marker.showInfoWindow();
+                }
+
+                @Override
+                public void onMarkerDrag(Marker marker) {
+
+                }
+
+                @Override
+                public void onMarkerDragEnd(Marker marker) {
+
                 }
             });
 
@@ -128,9 +148,9 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
                 @Override
                 public View getInfoContents(Marker marker) {
                     View v = getLayoutInflater().inflate(R.layout.gpswindow, null);
-                    TextView tvLocality = (TextView) v.findViewById(R.id.tv_locality);
-                    TextView tvLat = (TextView) v.findViewById(R.id.tv_lat);
-                    TextView tvLng = (TextView) v.findViewById(R.id.tv_lng);
+                    tvLocality = (TextView) v.findViewById(R.id.tv_locality);
+                    tvLat = (TextView) v.findViewById(R.id.tv_lat);
+                    tvLng = (TextView) v.findViewById(R.id.tv_lng);
                     TextView tvsnippet = (TextView) v.findViewById(R.id.tv_snippet);
                     LatLng ll = marker.getPosition();
                     tvLocality.setText(marker.getTitle());
@@ -144,7 +164,8 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
 
-    //goToLocationZoom(16.4964308, 80.6516815, 15);
+
+            //goToLocationZoom(16.4964308, 80.6516815, 15);
 
     //buildGoogleApiClient();
 
@@ -167,7 +188,7 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     public void geoLocate(View view) throws IOException {
-        EditText et = (EditText) findViewById(R.id.location_search);
+        et = (EditText) findViewById(R.id.location_search);
         String location = et.getText().toString();
         Geocoder gc = new Geocoder(this);
         try {
@@ -186,9 +207,6 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
     }
 
     private void setMarker(String locality, double lat, double lng) {
-        if (marker != null) {
-            marker.remove();
-        }
         MarkerOptions markerOptions = new MarkerOptions()
                 .title(locality)
                 .draggable(true)
@@ -243,6 +261,27 @@ public class MapsActivity extends FragmentActivity implements OnMapReadyCallback
             CameraUpdate update = CameraUpdateFactory.newLatLngZoom(l1, 15);
             mMap.animateCamera(update);
         }
+    }
+
+    public void AddHungerspot(View view) {
+        LatLng l2= marker.getPosition();
+        double lat=l2.latitude;
+        double lng=l2.longitude;
+        String s=tvLocality.getText().toString();
+         id = mDatabase.push().getKey();
+        maps info=new maps(s,lat,lng);
+        mDatabase.child(id).setValue(info);
+        Toast.makeText(this,"Added",Toast.LENGTH_LONG).show();
+
+   }
+
+    public void deleteHungerSpot(View view) {
+       if(marker!=null){
+
+
+           marker.remove();
+       marker=null;
+       Toast.makeText(this,"Deleted",Toast.LENGTH_LONG).show();}
     }
 
    /* public void getLastLocation() {

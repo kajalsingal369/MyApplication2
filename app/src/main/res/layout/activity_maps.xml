@@ -25,6 +25,7 @@
     <Button
         android:layout_width="170dp"
         android:layout_height="50dp"
+        android:onClick="AddHungerspot"
         android:id="@+id/Add_hungerspot"
         android:layout_alignParentBottom="true"
         android:layout_alignParentStart="true"
@@ -35,6 +36,7 @@
         android:id="@+id/delete_hungerspot"
         android:layout_width="170dp"
         android:layout_height="50dp"
+        android:onClick="deleteHungerSpot"
         android:layout_alignParentBottom="true"
         android:layout_toEndOf="@+id/Add_hungerspot"
         android:text="Delete"/>
